@@ -23,6 +23,8 @@ module.exports = async (captchaInput, captchaId) => {
 
 	captchaInput = Array.isArray(captchaInput) ? captchaInput : [captchaInput];
 
+console.log(captchaInput)
+
 	switch (captchaOptions.type) {
 		case 'grid': //grid captcha
 			const gridCaptchaMongoId = ObjectId(captchaId);

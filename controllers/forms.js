@@ -53,7 +53,19 @@ const express  = require('express')
 
 //make new post
 router.post('/board/:board/post', geoAndTor, handlePostFilesEarlyTor, torPreBypassCheck, processIp, useSession, sessionRefresh, Boards.exists, calcPerms, banCheck, handlePostFiles,
-	paramConverter, verifyCaptcha, numFiles, blockBypassCheck, dnsblCheck, imageHashes, makePostController);
+	paramConverter, verifyCaptcha, blockBypassCheck, dnsblCheck, async (req, res, next) => {
+		if (res.locals.filesDone) {
+			console.log(res.locals.filesDone);
+			try {
+				console.log('AWAITING filesDone')
+				await res.locals.filesDone;
+			} catch (err) {
+				return next(err);
+			}
+		}
+		console.log('GOING NEXT AFTER await filesDone')
+		next();
+	}, numFiles, imageHashes, makePostController);
 router.post('/board/:board/modpost', geoAndTor, handlePostFilesEarlyTor, torPreBypassCheck, processIp, useSession, sessionRefresh, Boards.exists, calcPerms, banCheck, isLoggedIn, hasPerms(3), handlePostFiles,
 	paramConverter, csrf, numFiles, blockBypassCheck, dnsblCheck, makePostController); //mod post has token instead of captcha
 
