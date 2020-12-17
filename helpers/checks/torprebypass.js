@@ -27,7 +27,7 @@ module.exports = async (req, res, next) => {
 			try {
 				await checkCaptcha(input, captchaId);
 			} catch (err) {
-				deleteTempFiles(req).catch(e => console.error);
+				await deleteTempFiles(req, res).catch(e => console.error);
 				if (err instanceof Error) {
 					return next(err);
 				}
@@ -66,7 +66,7 @@ module.exports = async (req, res, next) => {
 	//check if blockbypass exists and right length
 	if (!bypassId || bypassId.length !== 24) {
 		res.clearCookie('bypassid');
-		deleteTempFiles(req).catch(e => console.error);
+		await deleteTempFiles(req, res).catch(e => console.error);
 		return dynamicResponse(req, res, 403, 'message', {
 			'title': 'Forbidden',
 			'message': 'Please complete a block bypass to continue',

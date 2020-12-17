@@ -19,7 +19,7 @@ module.exports = async (req, res, next) => {
 			await cache.set(`blacklisted:${ip}`, isBlacklisted, dnsbl.cacheTime);
 		}
 		if (isBlacklisted) {
-			deleteTempFiles(req).catch(e => console.error);
+			deleteTempFiles(req, res).catch(e => console.error);
 			return dynamicResponse(req, res, 403, 'message', {
 				'title': 'Forbidden',
 				'message': 'Your IP address is listed on a blacklist',

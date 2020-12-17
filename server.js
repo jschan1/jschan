@@ -113,8 +113,7 @@ const express = require('express')
 		if (err.code === 'EBADCSRFTOKEN') {
 			errMessage = 'Invalid CSRF token';
 			errStatus= 403;
-		}
-		if (err.type != null) {
+		} else if (err.type != null) {
 			//body-parser errors
 			errStatus = err.status;
 			switch (err.type) {

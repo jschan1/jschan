@@ -37,7 +37,7 @@ module.exports = async (req, res, next) => {
 	//spam/flood check
 	const flood = await spamCheck(req, res);
 	if (flood) {
-		deleteTempFiles(req).catch(e => console.error);
+		deleteTempFiles(req, res).catch(e => console.error);
 		return dynamicResponse(req, res, 429, 'message', {
 			'title': 'Flood detected',
 			'message': 'Please wait before making another post, or a post similar to another user',
@@ -64,7 +64,7 @@ module.exports = async (req, res, next) => {
 	}
 	if ((lockMode === 2 || (lockMode === 1 && !req.body.thread)) //if board lock, or thread lock and its a new thread
 		&& res.locals.permLevel >= 4) { //and not staff
-		await deleteTempFiles(req).catch(e => console.error);
+		await deleteTempFiles(req, res).catch(e => console.error);
 		return dynamicResponse(req, res, 400, 'message', {
 			'title': 'Bad request',
 			'message': lockMode === 1 ? 'Thread creation locked' : 'Board locked',
@@ -74,7 +74,7 @@ module.exports = async (req, res, next) => {
 	if (req.body.thread) {
 		thread = await Posts.getPost(req.params.board, req.body.thread, true);
 		if (!thread || thread.thread != null) {
-			await deleteTempFiles(req).catch(e => console.error);
+			await deleteTempFiles(req, res).catch(e => console.error);
 			return dynamicResponse(req, res, 400, 'message', {
 				'title': 'Bad request',
 				'message': 'Thread does not exist',
@@ -84,7 +84,7 @@ module.exports = async (req, res, next) => {
 		salt = thread.salt;
 		redirect += `thread/${req.body.thread}.html`
 		if (thread.locked && res.locals.permLevel >= 4) {
-			await deleteTempFiles(req).catch(e => console.error);
+			await deleteTempFiles(req, res).catch(e => console.error);
 			return dynamicResponse(req, res, 400, 'message', {
 				'title': 'Bad request',
 				'message': 'Thread Locked',
@@ -92,7 +92,7 @@ module.exports = async (req, res, next) => {
 			});
 		}
 		if (thread.replyposts >= replyLimit && !thread.cyclic) { //reply limit
-			await deleteTempFiles(req).catch(e => console.error);
+			await deleteTempFiles(req, res).catch(e => console.error);
 			return dynamicResponse(req, res, 400, 'message', {
 				'title': 'Bad request',
 				'message': 'Thread reached reply limit',
@@ -124,7 +124,7 @@ ${res.locals.numFiles > 0 ? req.files.file.map(f => f.name+'|'+(f.phash || '')).
 			hitLocalFilter = filters.some(filter => { return localFilterContents.includes(filter.toLowerCase()) });
 		}
 		if (hitGlobalFilter || hitLocalFilter) {
-			await deleteTempFiles(req).catch(e => console.error);
+			await deleteTempFiles(req, res).catch(e => console.error);
 			const useFilterMode = hitGlobalFilter ? globalSettings.filterMode : filterMode; //global override local filter
 			if (useFilterMode === 1) {
 				return dynamicResponse(req, res, 400, 'message', {
@@ -170,7 +170,7 @@ ${res.locals.numFiles > 0 ? req.files.file.map(f => f.name+'|'+(f.phash || '')).
 		if (res.locals.permLevel >= 4 && (req.body.thread && messageR9KMode === 1) || messageR9KMode === 2) {
 			const postWithExistingMessage = await Posts.checkExistingMessage(res.locals.board._id, (messageR9KMode === 2 ? null : req.body.thread), messageHash);
 			if (postWithExistingMessage != null) {
-				await deleteTempFiles(req).catch(e => console.error);
+				await deleteTempFiles(req, res).catch(e => console.error);
 				return dynamicResponse(req, res, 409, 'message', {
 					'title': 'Conflict',
 					'message': `Messages must be unique ${messageR9KMode === 1 ? 'in this thread' : 'on this board'}. Your message is not unique.`,
@@ -187,7 +187,7 @@ ${res.locals.numFiles > 0 ? req.files.file.map(f => f.name+'|'+(f.phash || '')).
 			const filesHashes = req.files.file.map(f => f.sha256);
 			const postWithExistingFiles = await Posts.checkExistingFiles(res.locals.board._id, (fileR9KMode === 2 ? null : req.body.thread), filesHashes);
 			if (postWithExistingFiles != null) {
-				await deleteTempFiles(req).catch(e => console.error);
+				await deleteTempFiles(req, res).catch(e => console.error);
 				const conflictingFiles = req.files.file
 					.filter(f => postWithExistingFiles.files.some(fx => fx.hash === f.sha256))
 					.map(f => f.name)
@@ -202,7 +202,7 @@ ${res.locals.numFiles > 0 ? req.files.file.map(f => f.name+'|'+(f.phash || '')).
 		// check all mime types before we try saving anything
 		for (let i = 0; i < res.locals.numFiles; i++) {
 			if (!mimeTypes.allowed(req.files.file[i].mimetype, allowedFileTypes)) {
-				await deleteTempFiles(req).catch(e => console.error);
+				await deleteTempFiles(req, res).catch(e => console.error);
 				return dynamicResponse(req, res, 400, 'message', {
 					'title': 'Bad request',
 					'message': `Mime type "${req.files.file[i].mimetype}" for "${req.files.file[i].name}" not allowed`,
@@ -214,7 +214,7 @@ ${res.locals.numFiles > 0 ? req.files.file.map(f => f.name+'|'+(f.phash || '')).
 		if (checkRealMimeTypes) {
 			for (let i = 0; i < res.locals.numFiles; i++) {
 				if (!(await mimeTypes.realMimeCheck(req.files.file[i]))) {
-					deleteTempFiles(req).catch(e => console.error);
+					deleteTempFiles(req, res).catch(e => console.error);
 					return dynamicResponse(req, res, 400, 'message', {
 						'title': 'Bad request',
 						'message': `Mime type mismatch for file "${req.files.file[i].name}"`,
@@ -267,7 +267,7 @@ ${res.locals.numFiles > 0 ? req.files.file.map(f => f.name+'|'+(f.phash || '')).
 						try {
 							imageData = await imageIdentify(req.files.file[i].tempFilePath, null, true);
 						} catch (e) {
-							await deleteTempFiles(req).catch(e => console.error);
+							await deleteTempFiles(req, res).catch(e => console.error);
 							return dynamicResponse(req, res, 400, 'message', {
 								'title': 'Bad request',
 								'message': `The server failed to process "${req.files.file[i].name}". Possible unsupported or corrupt file.`,
@@ -369,7 +369,7 @@ ${res.locals.numFiles > 0 ? req.files.file.map(f => f.name+'|'+(f.phash || '')).
 		}
 	}
 	// because express middleware is autistic i need to do this
-	deleteTempFiles(req).catch(e => console.error);
+	deleteTempFiles(req, res).catch(e => console.error);
 
 	let userId = null;
 	if (!salt) {

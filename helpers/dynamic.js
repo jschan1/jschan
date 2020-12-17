@@ -1,7 +1,7 @@
 'use strict';
 
 module.exports = (req, res, code, page, data) => {
-	res.locals.alreadyNext = true;
+	res.locals.asyncNext = true;
 	res.status(code);
 	if (req.body.minimal) {
 		data.minimal = true;

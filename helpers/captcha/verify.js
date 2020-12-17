@@ -30,7 +30,7 @@ module.exports = async (req, res, next) => {
 	try {
 		await checkCaptcha(captchaInput, captchaId);
 	} catch (err) {
-		deleteTempFiles(req).catch(e => console.error);
+		await deleteTempFiles(req, res).catch(e => console.error);
 		if (err instanceof Error) {
 			return next(err);
 		}

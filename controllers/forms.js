@@ -27,7 +27,6 @@ const express  = require('express')
 	, appealController = require(__dirname+'/forms/appeal.js')
 	, globalActionController = require(__dirname+'/forms/globalactions.js')
 	, actionController = require(__dirname+'/forms/actions.js')
-//	, addBanController = require(__dirname+'/forms/addban.js')
 	, addCustomPageController = require(__dirname+'/forms/addcustompage.js')
 	, deleteCustomPageController = require(__dirname+'/forms/deletecustompage.js')
 	, addNewsController = require(__dirname+'/forms/addnews.js')
@@ -51,23 +50,26 @@ const express  = require('express')
 	, blockBypass = require(__dirname+'/../models/forms/blockbypass.js')
 	, logout = require(__dirname+'/../models/forms/logout.js');
 
+//todo: move to separate handler
+const awaitFiles = async (req, res, next) => {
+	if (res.locals.filesDone) {
+console.log('AAAAAAAAAAAAAAa')
+		try {
+			console.log('awaiting async multipart file uploads')
+			await res.locals.filesDone;
+		} catch (err) {
+			return next(err);
+		}
+		console.log('finished async multipart file uploads')
+	}
+	next();
+}
+
 //make new post
 router.post('/board/:board/post', geoAndTor, handlePostFilesEarlyTor, torPreBypassCheck, processIp, useSession, sessionRefresh, Boards.exists, calcPerms, banCheck, handlePostFiles,
-	paramConverter, verifyCaptcha, blockBypassCheck, dnsblCheck, async (req, res, next) => {
-		if (res.locals.filesDone) {
-			console.log(res.locals.filesDone);
-			try {
-				console.log('AWAITING filesDone')
-				await res.locals.filesDone;
-			} catch (err) {
-				return next(err);
-			}
-		}
-		console.log('GOING NEXT AFTER await filesDone')
-		next();
-	}, numFiles, imageHashes, makePostController);
+	paramConverter, verifyCaptcha, blockBypassCheck, dnsblCheck, awaitFiles, numFiles, imageHashes, makePostController);
 router.post('/board/:board/modpost', geoAndTor, handlePostFilesEarlyTor, torPreBypassCheck, processIp, useSession, sessionRefresh, Boards.exists, calcPerms, banCheck, isLoggedIn, hasPerms(3), handlePostFiles,
-	paramConverter, csrf, numFiles, blockBypassCheck, dnsblCheck, makePostController); //mod post has token instead of captcha
+	paramConverter, csrf, awaitFiles, numFiles, blockBypassCheck, dnsblCheck, makePostController); //mod post has token instead of captcha
 
 //post actions
 router.post('/board/:board/actions', geoAndTor, torPreBypassCheck, processIp, useSession, sessionRefresh, Boards.exists, calcPerms, banCheck, paramConverter, verifyCaptcha, actionController); //public, with captcha
@@ -81,11 +83,10 @@ router.post('/editpost', geoAndTor, torPreBypassCheck, processIp, useSession, se
 //board management forms
 router.post('/board/:board/transfer', /*geoAndTor, torPreBypassCheck, processIp,*/ useSession, sessionRefresh, csrf, Boards.exists, calcPerms, isLoggedIn, hasPerms(2), paramConverter, transferController);
 router.post('/board/:board/settings', /*geoAndTor, torPreBypassCheck, processIp,*/ useSession, sessionRefresh, csrf, Boards.exists, calcPerms, isLoggedIn, hasPerms(2), paramConverter, boardSettingsController);
-router.post('/board/:board/addbanners', /*geoAndTor, torPreBypassCheck, processIp,*/ useSession, sessionRefresh, handleBannerFiles, csrf, Boards.exists, calcPerms, isLoggedIn, hasPerms(2), paramConverter, numFiles, uploadBannersController); //add banners
+router.post('/board/:board/addbanners', /*geoAndTor, torPreBypassCheck, processIp,*/ useSession, sessionRefresh, handleBannerFiles, csrf, Boards.exists, calcPerms, isLoggedIn, hasPerms(2), paramConverter, awaitFiles, numFiles, uploadBannersController); //add banners
 router.post('/board/:board/deletebanners', /*geoAndTor, torPreBypassCheck, processIp,*/ useSession, sessionRefresh, csrf, Boards.exists, calcPerms, isLoggedIn, hasPerms(2), paramConverter, deleteBannersController); //delete banners
 router.post('/board/:board/addcustompages', /*geoAndTor, torPreBypassCheck, processIp,*/ useSession, sessionRefresh, csrf, Boards.exists, calcPerms, isLoggedIn, hasPerms(2), paramConverter, addCustomPageController); //add banners
 router.post('/board/:board/deletecustompages', /*geoAndTor, torPreBypassCheck, processIp,*/ useSession, sessionRefresh, csrf, Boards.exists, calcPerms, isLoggedIn, hasPerms(2), paramConverter, deleteCustomPageController); //delete banners
-//router.post('/board/:board/addban', geoAndTor, torPreBypassCheck, processIp, useSession, sessionRefresh, csrf, Boards.exists, calcPerms, isLoggedIn, hasPerms(3), paramConverter, addBanController); //add ban manually without post
 router.post('/board/:board/editbans', /*geoAndTor, torPreBypassCheck, processIp,*/ useSession, sessionRefresh, csrf, Boards.exists, calcPerms, isLoggedIn, hasPerms(3), paramConverter, editBansController); //edit bans
 router.post('/board/:board/deleteboard', /*geoAndTor, torPreBypassCheck, processIp,*/ useSession, sessionRefresh, csrf, Boards.exists, calcPerms, isLoggedIn, hasPerms(2), deleteBoardController); //delete board
 

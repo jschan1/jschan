@@ -19,7 +19,7 @@ module.exports = async (req, res, next) => {
 	//check if blockbypass exists and right length
 	const bypassId = req.signedCookies.bypassid;
 	if (!res.locals.solvedCaptcha && (!bypassId || bypassId.length !== 24)) {
-		deleteTempFiles(req).catch(e => console.error);
+		deleteTempFiles(req, res).catch(e => console.error);
 		return dynamicResponse(req, res, 403, 'message', {
 			'title': 'Forbidden',
 			'message': 'Please complete a block bypass to continue',
@@ -63,7 +63,7 @@ module.exports = async (req, res, next) => {
 		return next();
 	}
 
-	deleteTempFiles(req).catch(e => console.error);
+	deleteTempFiles(req, res).catch(e => console.error);
 	return dynamicResponse(req, res, 403, 'message', {
 		'title': 'Forbidden',
 		'message': 'Block bypass expired or exceeded max uses',

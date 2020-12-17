@@ -26,29 +26,21 @@ const waitFlushProperty = Symbol('wait flush property symbol');
  */
 module.exports = (options, req, res, next) => {
 
-	res.locals.alreadyNext = false;
+	res.locals.asyncNext = false;
+
 	res.locals.filesDone = new Promise((resolve, reject) => {
 
-		const finish = (err) => {
-			if (err) {
-				reject();
-			} else {
-				resolve();
-			}
-			cleanAll();
-			if (!res.locals.alreadyNext) {
-				return next(err);
-			}
-		};
-
-		req.files = null;
-		let totalSize = 0;
 		debugLog(options, `Request with content-length header ${req.headers['content-length']}`);
 		if (req.headers['content-length'] > options.limits.totalSize) {
 			return options.limitHandler(req, res, next);
 		}
+
+		req.files = null;
+		let totalSize = 0;
+
 		const cleanups = [];
 		const cleanAll = () => {
+			resolve();
 			cleanups.forEach(cleanup => {
 				cleanup();
 			});
@@ -56,6 +48,17 @@ module.exports = (options, req, res, next) => {
 		}
 		res.locals.cleanAll = cleanAll;
 		req.on('aborted', cleanAll);
+
+		const finish = (err) => {
+			if (err) {
+				cleanAll();
+			} else {
+				resolve();
+			}
+			if (!res.locals.asyncNext) {
+				return next(err);
+			}
+		};
 
 		// Build busboy options and init busboy instance.
 		const busboyOptions = buildOptions(options, { headers: req.headers });
@@ -70,21 +73,20 @@ module.exports = (options, req, res, next) => {
 
 		// Build multipart req.body fields
 		busboy.on('field', (field, val) => {
-			req.body = buildFields(req.body, field, val)
 			if (field === 'captcha') {
-				debugLog(options, `Got captcha field, checking. Finishing file uploads async in background`);
+				//
 			}
+			req.body = buildFields(req.body, field, val)
 		});
 
 		// Build req.files fields
 		busboy.on('file', (field, file, name, encoding, mime) => {
 
 			//Go next early, do files in background. relying on files being uploaded after fields in multipart data
-				if (!res.locals.alreadyNext) {
-					res.locals.alreadyNext = true;
-					next();
-				}
-
+			if (!res.locals.asyncNext) {
+				res.locals.asyncNext = true;
+				next();
+			}
 
 			// Parse file name(cutting huge names, decoding, etc..).
 			const filename = parseFileName(options, name);
@@ -120,15 +122,15 @@ module.exports = (options, req, res, next) => {
 			});
 
 			file.on('data', (data) => {
-			totalSize+=data.length;
-			if (totalSize > options.limits.totalSize) {
-				debugLog(options, `Aborting upload because of size limit.`);
-				req.unpipe(busboy);
-				cleanAll();
-				return options.limitHandler(req, res, next);
-			}
-			dataHandler(data);
-		});
+				totalSize+=data.length;
+				if (totalSize > options.limits.totalSize) {
+					debugLog(options, `Aborting upload because of size limit.`);
+					req.unpipe(busboy);
+					cleanAll();
+					return options.limitHandler(req, res, next);
+				}
+				dataHandler(data);
+			});
 
 			file.on('end', () => {
 				const size = getFileSize();
@@ -157,12 +159,12 @@ module.exports = (options, req, res, next) => {
 
 			file.on('error', (err) => {
 				debugLog(options, `Error ${field}->${filename}, bytes:${getFileSize()}, error:${err}`);
-				cleanAll();
-				finish();
+				finish(err);
 			});
 
 			// Debug logging for a new file upload.
 			debugLog(options, `New upload started ${field}->${filename}, bytes:${getFileSize()}`);
+
 		});
 
 		busboy.on('filesLimit', () => {

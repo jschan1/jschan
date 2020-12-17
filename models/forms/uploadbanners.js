@@ -26,7 +26,7 @@ module.exports = async (req, res, next) => {
 				audio: false,
 				other: false
 			})) {
-			await deleteTempFiles(req).catch(e => console.error);
+			await deleteTempFiles(req, res).catch(e => console.error);
 			return dynamicResponse(req, res, 400, 'message', {
 				'title': 'Bad request',
 				'message': `Invalid file type for ${req.files.file[i].name}. Mimetype ${req.files.file[i].mimetype} not allowed.`,
@@ -39,7 +39,7 @@ module.exports = async (req, res, next) => {
 	if (checkRealMimeTypes) {
 		for (let i = 0; i < res.locals.numFiles; i++) {
 			if (!(await mimeTypes.realMimeCheck(req.files.file[i]))) {
-				deleteTempFiles(req).catch(e => console.error);
+				deleteTempFiles(req, res).catch(e => console.error);
 				return dynamicResponse(req, res, 400, 'message', {
 					'title': 'Bad request',
 					'message': `Mime type mismatch for file "${req.files.file[i].name}"`,
@@ -75,7 +75,7 @@ module.exports = async (req, res, next) => {
 
 		//make sure its 300x100 banner
 		if (geometry.width !== 300 || geometry.height !== 100) {
-			await deleteTempFiles(req).catch(e => console.error);
+			await deleteTempFiles(req, res).catch(e => console.error);
 			return dynamicResponse(req, res, 400, 'message', {
 				'title': 'Bad request',
 				'message': `Invalid file ${file.name}. Banners must be 300x100.`,
@@ -91,7 +91,7 @@ module.exports = async (req, res, next) => {
 
 	}
 
-	deleteTempFiles(req).catch(e => console.error);
+	deleteTempFiles(req, res).catch(e => console.error);
 
 	// no new banners
 	if (filenames.length === 0) {

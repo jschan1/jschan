@@ -18,7 +18,7 @@ module.exports = async (req, res, next) => {
 	}
 
 	if (errors.length > 0) {
-		await deleteTempFiles(req).catch(e => console.error);
+		await deleteTempFiles(req, res).catch(e => console.error);
 		return dynamicResponse(req, res, 400, 'message', {
 			'title': 'Bad request',
 			'errors': errors,
@@ -29,7 +29,7 @@ module.exports = async (req, res, next) => {
 	try {
 		await uploadBanners(req, res, next);
 	} catch (err) {
-		await deleteTempFiles(req).catch(e => console.error);
+		await deleteTempFiles(req. res).catch(e => console.error);
 		return next(err);
 	}
 
