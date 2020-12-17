@@ -53,7 +53,6 @@ const express  = require('express')
 //todo: move to separate handler
 const awaitFiles = async (req, res, next) => {
 	if (res.locals.filesDone) {
-console.log('AAAAAAAAAAAAAAa')
 		try {
 			console.log('awaiting async multipart file uploads')
 			await res.locals.filesDone;
